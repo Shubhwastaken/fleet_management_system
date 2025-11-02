@@ -1,0 +1,79 @@
+# Setup Instructions - Follow These Steps
+
+## Step 1: Install Node.js (If Not Installed)
+Download from: https://nodejs.org/
+Install the LTS version and restart your computer.
+
+## Step 2: Setup Database
+1. Open MySQL Workbench
+2. Connect to your local MySQL server
+3. Open File → Open SQL Script
+4. Select: database/complete_setup.sql
+5. Click the lightning bolt ⚡ to execute
+6. Verify you see "Database setup complete!"
+
+## Step 3: Configure Environment
+1. Open the .env file in the root folder
+2. Update DB_PASSWORD with YOUR MySQL password:
+   DB_PASSWORD=your_actual_mysql_password
+
+## Step 4: Install Dependencies
+
+Open PowerShell in the project folder and run:
+
+# Install backend dependencies
+npm install
+
+# Install frontend dependencies
+cd client
+npm install
+cd ..
+
+## Step 5: Run the Application
+
+### Option A: Run both together (Recommended)
+npm run dev
+
+### Option B: Run separately
+
+Terminal 1 (Backend):
+npm run server
+
+Terminal 2 (Frontend):
+cd client
+npm start
+
+## Step 6: Access the Application
+
+Frontend: http://localhost:3000
+Backend API: http://localhost:5000
+
+## Troubleshooting
+
+### "node is not recognized"
+- Install Node.js and restart computer
+
+### "Cannot connect to database"
+- Check MySQL is running
+- Verify .env credentials
+- Run complete_setup.sql
+
+### "Port already in use"
+- Close other apps using the port
+- Or change PORT in .env file
+
+### Data not showing
+- Make sure backend is running first
+- Check console for errors (F12 in browser)
+- Verify database has data: SELECT * FROM aircraft;
+
+## What You Should See
+
+✅ Dashboard with statistics (10 aircraft, flights, etc.)
+✅ Fleet tab showing all 10 aircraft from database
+✅ Tracking tab with real-time data
+✅ Maintenance records from database
+✅ TCL tab for transaction demos
+✅ DCL tab for user management
+
+All data comes from your MySQL database!

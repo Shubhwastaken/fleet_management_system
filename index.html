@@ -1,0 +1,433 @@
+import React, { useState, useEffect } from 'react';
+import { Plane, MapPin, Wrench, Calendar, Activity, AlertCircle, CheckCircle, Clock, TrendingUp, Users, BarChart3, Map } from 'lucide-react';
+
+// Mock data based on your database structure
+const mockAircraft = [
+  { Aircraft_ID: 1, Model: 'Boeing 737', Capacity: 180, Manufacture_Date: '2015-06-12', Airline: 'Delta Airlines', Last_Known_Loc: 'New York', Status: 'Active' },
+  { Aircraft_ID: 2, Model: 'Airbus A320', Capacity: 160, Manufacture_Date: '2017-03-22', Airline: 'American Airlines', Last_Known_Loc: 'Los Angeles', Status: 'Active' },
+  { Aircraft_ID: 3, Model: 'Boeing 777', Capacity: 396, Manufacture_Date: '2012-11-05', Airline: 'Emirates', Last_Known_Loc: 'Dubai', Status: 'Maintenance' },
+  { Aircraft_ID: 4, Model: 'Airbus A380', Capacity: 500, Manufacture_Date: '2019-08-17', Airline: 'Singapore Airlines', Last_Known_Loc: 'Singapore', Status: 'Active' },
+  { Aircraft_ID: 5, Model: 'Boeing 747', Capacity: 416, Manufacture_Date: '2010-02-13', Airline: 'Lufthansa', Last_Known_Loc: 'Frankfurt', Status: 'Inactive' },
+  { Aircraft_ID: 6, Model: 'Boeing 787', Capacity: 242, Manufacture_Date: '2020-05-25', Airline: 'Qatar Airways', Last_Known_Loc: 'Doha', Status: 'Active' },
+  { Aircraft_ID: 7, Model: 'Bombardier Q400', Capacity: 78, Manufacture_Date: '2016-07-19', Airline: 'IndiGo', Last_Known_Loc: 'Delhi', Status: 'Active' },
+  { Aircraft_ID: 8, Model: 'ATR 72', Capacity: 74, Manufacture_Date: '2014-12-01', Airline: 'SpiceJet', Last_Known_Loc: 'Mumbai', Status: 'Maintenance' },
+  { Aircraft_ID: 9, Model: 'Boeing 737 MAX', Capacity: 200, Manufacture_Date: '2021-01-10', Airline: 'United Airlines', Last_Known_Loc: 'Chicago', Status: 'Active' },
+  { Aircraft_ID: 10, Model: 'Airbus A350', Capacity: 325, Manufacture_Date: '2018-09-15', Airline: 'Cathay Pacific', Last_Known_Loc: 'Hong Kong', Status: 'Active' }
+];
+
+const mockFlights = [
+  { Flight_ID: 1, Aircraft_ID: 1, Origin: 'New York', Destination: 'Los Angeles', Departure_Time: '2025-09-01 08:30:00', Arrival_Time: '2025-09-01 11:30:00', Attribute: 'Domestic' },
+  { Flight_ID: 2, Aircraft_ID: 2, Origin: 'Los Angeles', Destination: 'Chicago', Departure_Time: '2025-09-02 09:15:00', Arrival_Time: '2025-09-02 13:00:00', Attribute: 'Domestic' },
+  { Flight_ID: 3, Aircraft_ID: 3, Origin: 'Dubai', Destination: 'Singapore', Departure_Time: '2025-09-03 14:00:00', Arrival_Time: '2025-09-03 20:00:00', Attribute: 'International' },
+  { Flight_ID: 4, Aircraft_ID: 4, Origin: 'Singapore', Destination: 'Frankfurt', Departure_Time: '2025-09-04 22:00:00', Arrival_Time: '2025-09-05 06:00:00', Attribute: 'International' },
+  { Flight_ID: 9, Aircraft_ID: 9, Origin: 'Chicago', Destination: 'Hong Kong', Departure_Time: '2025-09-09 13:00:00', Arrival_Time: '2025-09-10 08:00:00', Attribute: 'International' }
+];
+
+const mockMaintenance = [
+  { Maintenance_ID: 1, Aircraft_ID: 1, Tech_ID: 1, Date: '2025-08-01', Type: 'Engine Check', Remark: 'No issues found', Status: 'Completed' },
+  { Maintenance_ID: 3, Aircraft_ID: 3, Tech_ID: 3, Date: '2025-08-05', Type: 'Airframe Inspection', Remark: 'Minor cracks repaired', Status: 'Completed' },
+  { Maintenance_ID: 8, Aircraft_ID: 8, Tech_ID: 8, Date: '2025-08-16', Type: 'Flight Systems Test', Remark: 'Autopilot adjusted', Status: 'Completed' },
+  { Maintenance_ID: 11, Aircraft_ID: 3, Tech_ID: 5, Date: '2025-11-05', Type: 'Engine Overhaul', Remark: 'Scheduled maintenance', Status: 'Pending' },
+  { Maintenance_ID: 12, Aircraft_ID: 8, Tech_ID: 2, Date: '2025-11-08', Type: 'Avionics Update', Remark: 'Software update required', Status: 'In Progress' }
+];
+
+const mockTracking = [
+  { Tracking_ID: 1, Aircraft_ID: 1, Timestamp: '2025-09-01 09:00:00', Speed: 850, Altitude: 35000, Longitude: -73.7781, Latitude: 40.6413, Status: 'In Flight' },
+  { Tracking_ID: 2, Aircraft_ID: 2, Timestamp: '2025-09-02 10:00:00', Speed: 820, Altitude: 34000, Longitude: -118.409, Latitude: 33.9416, Status: 'In Flight' },
+  { Tracking_ID: 4, Aircraft_ID: 4, Timestamp: '2025-09-04 23:00:00', Speed: 880, Altitude: 35500, Longitude: 103.992, Latitude: 1.3644, Status: 'In Flight' },
+  { Tracking_ID: 9, Aircraft_ID: 9, Timestamp: '2025-09-09 14:00:00', Speed: 910, Altitude: 37000, Longitude: -87.9048, Latitude: 41.9742, Status: 'In Flight' }
+];
+
+const App = () => {
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [selectedAircraft, setSelectedAircraft] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const statusColors = {
+    'Active': 'bg-green-100 text-green-800 border-green-200',
+    'Maintenance': 'bg-yellow-100 text-yellow-800 border-yellow-200',
+    'Inactive': 'bg-red-100 text-red-800 border-red-200',
+    'In Flight': 'bg-blue-100 text-blue-800 border-blue-200',
+    'Completed': 'bg-green-100 text-green-800 border-green-200',
+    'Pending': 'bg-orange-100 text-orange-800 border-orange-200',
+    'In Progress': 'bg-blue-100 text-blue-800 border-blue-200'
+  };
+
+  const stats = {
+    totalAircraft: mockAircraft.length,
+    activeFlights: mockAircraft.filter(a => a.Status === 'Active').length,
+    maintenance: mockAircraft.filter(a => a.Status === 'Maintenance').length,
+    totalCapacity: mockAircraft.reduce((sum, a) => sum + a.Capacity, 0)
+  };
+
+  const filteredAircraft = mockAircraft.filter(aircraft =>
+    aircraft.Model.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    aircraft.Airline.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    aircraft.Last_Known_Loc.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const DashboardView = () => (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-6 text-white shadow-lg hover:shadow-xl transition-shadow">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-blue-100 text-sm font-medium">Total Fleet</p>
+              <p className="text-4xl font-bold mt-2">{stats.totalAircraft}</p>
+            </div>
+            <div className="bg-blue-400 bg-opacity-30 p-4 rounded-xl">
+              <Plane className="w-8 h-8" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-2xl p-6 text-white shadow-lg hover:shadow-xl transition-shadow">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-green-100 text-sm font-medium">Active Aircraft</p>
+              <p className="text-4xl font-bold mt-2">{stats.activeFlights}</p>
+            </div>
+            <div className="bg-green-400 bg-opacity-30 p-4 rounded-xl">
+              <Activity className="w-8 h-8" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-6 text-white shadow-lg hover:shadow-xl transition-shadow">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-orange-100 text-sm font-medium">In Maintenance</p>
+              <p className="text-4xl font-bold mt-2">{stats.maintenance}</p>
+            </div>
+            <div className="bg-orange-400 bg-opacity-30 p-4 rounded-xl">
+              <Wrench className="w-8 h-8" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl p-6 text-white shadow-lg hover:shadow-xl transition-shadow">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-purple-100 text-sm font-medium">Total Capacity</p>
+              <p className="text-4xl font-bold mt-2">{stats.totalCapacity}</p>
+            </div>
+            <div className="bg-purple-400 bg-opacity-30 p-4 rounded-xl">
+              <Users className="w-8 h-8" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+          <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+            <Activity className="w-5 h-5 text-blue-600" />
+            Active Flights
+          </h3>
+          <div className="space-y-3">
+            {mockFlights.slice(0, 4).map(flight => {
+              const aircraft = mockAircraft.find(a => a.Aircraft_ID === flight.Aircraft_ID);
+              return (
+                <div key={flight.Flight_ID} className="p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="font-semibold text-gray-800">{aircraft?.Model}</p>
+                      <p className="text-sm text-gray-600 mt-1">{flight.Origin} → {flight.Destination}</p>
+                    </div>
+                    <span className={px-3 py-1 rounded-full text-xs font-medium border ${statusColors[flight.Attribute === 'International' ? 'In Flight' : 'Active']}}>
+                      {flight.Attribute}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+          <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+            <Wrench className="w-5 h-5 text-orange-600" />
+            Maintenance Schedule
+          </h3>
+          <div className="space-y-3">
+            {mockMaintenance.slice(-4).map(maint => {
+              const aircraft = mockAircraft.find(a => a.Aircraft_ID === maint.Aircraft_ID);
+              return (
+                <div key={maint.Maintenance_ID} className="p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="font-semibold text-gray-800">{aircraft?.Model}</p>
+                      <p className="text-sm text-gray-600 mt-1">{maint.Type}</p>
+                      <p className="text-xs text-gray-500 mt-1">{maint.Date}</p>
+                    </div>
+                    <span className={px-3 py-1 rounded-full text-xs font-medium border ${statusColors[maint.Status]}}>
+                      {maint.Status}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const FleetView = () => (
+    <div className="space-y-6">
+      <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+          <h3 className="text-2xl font-bold text-gray-800">Fleet Overview</h3>
+          <input
+            type="text"
+            placeholder="Search aircraft..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredAircraft.map(aircraft => (
+            <div
+              key={aircraft.Aircraft_ID}
+              onClick={() => setSelectedAircraft(aircraft)}
+              className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-6 border border-gray-200 hover:shadow-lg transition-all cursor-pointer hover:scale-105"
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div className="bg-blue-100 p-3 rounded-xl">
+                  <Plane className="w-6 h-6 text-blue-600" />
+                </div>
+                <span className={px-3 py-1 rounded-full text-xs font-medium border ${statusColors[aircraft.Status]}}>
+                  {aircraft.Status}
+                </span>
+              </div>
+              
+              <h4 className="text-lg font-bold text-gray-800 mb-2">{aircraft.Model}</h4>
+              <p className="text-sm text-gray-600 mb-3">{aircraft.Airline}</p>
+              
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center gap-2 text-gray-700">
+                  <MapPin className="w-4 h-4 text-gray-500" />
+                  <span>{aircraft.Last_Known_Loc}</span>
+                </div>
+                <div className="flex items-center gap-2 text-gray-700">
+                  <Users className="w-4 h-4 text-gray-500" />
+                  <span>Capacity: {aircraft.Capacity}</span>
+                </div>
+                <div className="flex items-center gap-2 text-gray-700">
+                  <Calendar className="w-4 h-4 text-gray-500" />
+                  <span>Mfg: {new Date(aircraft.Manufacture_Date).getFullYear()}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {selectedAircraft && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick={() => setSelectedAircraft(null)}>
+          <div className="bg-white rounded-2xl p-8 max-w-2xl w-full shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <h3 className="text-2xl font-bold text-gray-800">{selectedAircraft.Model}</h3>
+                <p className="text-gray-600 mt-1">{selectedAircraft.Airline}</p>
+              </div>
+              <span className={px-4 py-2 rounded-full text-sm font-medium border ${statusColors[selectedAircraft.Status]}}>
+                {selectedAircraft.Status}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-6 mb-6">
+              <div>
+                <p className="text-sm text-gray-500 mb-1">Aircraft ID</p>
+                <p className="text-lg font-semibold text-gray-800">{selectedAircraft.Aircraft_ID}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500 mb-1">Capacity</p>
+                <p className="text-lg font-semibold text-gray-800">{selectedAircraft.Capacity} passengers</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500 mb-1">Manufacture Date</p>
+                <p className="text-lg font-semibold text-gray-800">{selectedAircraft.Manufacture_Date}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500 mb-1">Last Known Location</p>
+                <p className="text-lg font-semibold text-gray-800">{selectedAircraft.Last_Known_Loc}</p>
+              </div>
+            </div>
+
+            <div className="border-t pt-6">
+              <h4 className="font-semibold text-gray-800 mb-3">Recent Activity</h4>
+              <div className="space-y-3">
+                {mockMaintenance.filter(m => m.Aircraft_ID === selectedAircraft.Aircraft_ID).map(maint => (
+                  <div key={maint.Maintenance_ID} className="p-3 bg-gray-50 rounded-lg">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="font-medium text-gray-800">{maint.Type}</p>
+                        <p className="text-sm text-gray-600">{maint.Remark}</p>
+                        <p className="text-xs text-gray-500 mt-1">{maint.Date}</p>
+                      </div>
+                      <span className={px-3 py-1 rounded-full text-xs font-medium border ${statusColors[maint.Status]}}>
+                        {maint.Status}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <button
+              onClick={() => setSelectedAircraft(null)}
+              className="mt-6 w-full bg-blue-600 text-white py-3 rounded-xl font-medium hover:bg-blue-700 transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  const TrackingView = () => (
+    <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+      <h3 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+        <Map className="w-6 h-6 text-blue-600" />
+        Real-Time Tracking
+      </h3>
+      <div className="space-y-4">
+        {mockTracking.map(track => {
+          const aircraft = mockAircraft.find(a => a.Aircraft_ID === track.Aircraft_ID);
+          return (
+            <div key={track.Tracking_ID} className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <h4 className="text-lg font-bold text-gray-800">{aircraft?.Model}</h4>
+                  <p className="text-sm text-gray-600">{aircraft?.Airline}</p>
+                </div>
+                <span className={px-3 py-1 rounded-full text-xs font-medium border ${statusColors[track.Status]}}>
+                  {track.Status}
+                </span>
+              </div>
+              
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Speed</p>
+                  <p className="text-lg font-semibold text-gray-800">{track.Speed} km/h</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Altitude</p>
+                  <p className="text-lg font-semibold text-gray-800">{track.Altitude} ft</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Coordinates</p>
+                  <p className="text-sm font-semibold text-gray-800">{track.Latitude.toFixed(2)}, {track.Longitude.toFixed(2)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Last Update</p>
+                  <p className="text-sm font-semibold text-gray-800">{new Date(track.Timestamp).toLocaleTimeString()}</p>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  const MaintenanceView = () => (
+    <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+      <h3 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+        <Wrench className="w-6 h-6 text-orange-600" />
+        Maintenance Management
+      </h3>
+      <div className="space-y-4">
+        {mockMaintenance.map(maint => {
+          const aircraft = mockAircraft.find(a => a.Aircraft_ID === maint.Aircraft_ID);
+          return (
+            <div key={maint.Maintenance_ID} className="p-6 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+              <div className="flex justify-between items-start mb-3">
+                <div>
+                  <h4 className="text-lg font-bold text-gray-800">{maint.Type}</h4>
+                  <p className="text-sm text-gray-600 mt-1">{aircraft?.Model} - {aircraft?.Airline}</p>
+                </div>
+                <span className={px-3 py-1 rounded-full text-xs font-medium border ${statusColors[maint.Status]}}>
+                  {maint.Status}
+                </span>
+              </div>
+              
+              <p className="text-sm text-gray-700 mb-3">{maint.Remark}</p>
+              
+              <div className="flex items-center gap-4 text-sm text-gray-600">
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4" />
+                  <span>{maint.Date}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Users className="w-4 h-4" />
+                  <span>Technician ID: {maint.Tech_ID}</span>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      <nav className="bg-white shadow-lg border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="bg-blue-600 p-2 rounded-xl">
+                <Plane className="w-6 h-6 text-white" />
+              </div>
+              <h1 className="text-2xl font-bold text-gray-800">Aviation Fleet Management</h1>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="bg-green-100 px-4 py-2 rounded-xl">
+                <span className="text-sm font-medium text-green-800">System Online</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        <div className="flex gap-4 mb-8 overflow-x-auto pb-2">
+          {[
+            { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
+            { id: 'fleet', label: 'Fleet', icon: Plane },
+            { id: 'tracking', label: 'Tracking', icon: Map },
+            { id: 'maintenance', label: 'Maintenance', icon: Wrench }
+          ].map(tab => {
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all whitespace-nowrap ${
+                  activeTab === tab.id
+                    ? 'bg-blue-600 text-white shadow-lg scale-105'
+                    : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
+                }`}
+              >
+                <Icon className="w-5 h-5" />
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {activeTab === 'dashboard' && <DashboardView />}
+        {activeTab === 'fleet' && <FleetView />}
+        {activeTab === 'tracking' && <TrackingView />}
+        {activeTab === 'maintenance' && <MaintenanceView />}
+      </div>
+    </div>
+  );
+};
+
+export default App;
