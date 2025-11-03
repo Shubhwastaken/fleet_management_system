@@ -52,13 +52,17 @@ router.get('/aircraft/:aircraftId', async (req, res) => {
 
 // Create new maintenance record
 router.post('/', async (req, res) => {
-  const { Maintenance_ID, Aircraft_ID, Tech_ID, Date, Type, Remark, Status } = req.body;
+  const { Aircraft_ID, Tech_ID, Date, Type, Remark, Status } = req.body;
   try {
+    // First, get the next available Maintenance_ID
+    const [maxId] = await promisePool.query('SELECT MAX(Maintenance_ID) as maxId FROM maintenance');
+    const newMaintenanceId = (maxId[0].maxId || 0) + 1;
+    
     const [result] = await promisePool.query(
       'INSERT INTO maintenance (Maintenance_ID, Aircraft_ID, Tech_ID, Date, Type, Remark, Status) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [Maintenance_ID, Aircraft_ID, Tech_ID, Date, Type, Remark, Status]
+      [newMaintenanceId, Aircraft_ID, Tech_ID, Date, Type, Remark, Status]
     );
-    res.status(201).json({ message: 'Maintenance record created successfully', id: Maintenance_ID });
+    res.status(201).json({ message: 'Maintenance record created successfully', id: newMaintenanceId });
   } catch (error) {
     console.error('Error creating maintenance:', error);
     res.status(500).json({ error: 'Failed to create maintenance record' });
