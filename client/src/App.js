@@ -1,7 +1,14 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Plane, MapPin, Wrench, Calendar, Activity, Users, BarChart3, Map, Database, Shield } from 'lucide-react';
+import { Plane, MapPin, Wrench, Calendar, Activity, Users, BarChart3, Map, Database, Shield, Cloud, Filter } from 'lucide-react';
 import { aircraftAPI, flightsAPI, maintenanceAPI, trackingAPI, tclAPI, dclAPI, techniciansAPI, airportsAPI } from './api';
 import './App.css';
+import { PieChart, Pie, LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
+import { Calendar as BigCalendar, momentLocalizer } from 'react-big-calendar';
+import moment from 'moment';
+import 'react-big-calendar/lib/css/react-big-calendar.css';
+import axios from 'axios';
+
+const localizer = momentLocalizer(moment);
 
 // Fleet View Component
 const FleetView = ({ 
@@ -17,14 +24,18 @@ const FleetView = ({
   selectedAircraft,
   setSelectedAircraft,
   statusColors,
-  maintenance
+  maintenance,
+  filters,
+  setFilters
 }) => {
+  const [showFilters, setShowFilters] = useState(false);
+  
   return (
     <div className="space-y">
       <div className="card">
         <div className="card-header">
           <h3 className="page-title">Fleet Overview</h3>
-          <div style={{ display: 'flex', gap: '10px' }}>
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
             <input
               type="text"
               placeholder="Search aircraft..."
@@ -32,6 +43,13 @@ const FleetView = ({
               onChange={(e) => setSearchTerm(e.target.value)}
               className="search-input"
             />
+            <button 
+              onClick={() => setShowFilters(!showFilters)} 
+              className="btn-secondary"
+              style={{ whiteSpace: 'nowrap' }}
+            >
+              <Filter size={16} /> {showFilters ? 'Hide Filters' : 'Filters'}
+            </button>
             <button 
               onClick={() => setShowAddForm(!showAddForm)} 
               className="btn-primary"
@@ -41,6 +59,72 @@ const FleetView = ({
             </button>
           </div>
         </div>
+
+        {showFilters && (
+          <div className="filter-panel" style={{ padding: '15px', background: '#f8f9fa', borderRadius: '8px', marginTop: '10px' }}>
+            <div className="form-grid">
+              <div className="form-group">
+                <label className="form-label">Airline</label>
+                <select
+                  value={filters.airline}
+                  onChange={(e) => setFilters({...filters, airline: e.target.value})}
+                  className="form-input"
+                >
+                  <option value="">All Airlines</option>
+                  {[...new Set(filteredAircraft.map(a => a.Airline))].map(airline => (
+                    <option key={airline} value={airline}>{airline}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div className="form-group">
+                <label className="form-label">Status</label>
+                <select
+                  value={filters.status}
+                  onChange={(e) => setFilters({...filters, status: e.target.value})}
+                  className="form-input"
+                >
+                  <option value="">All Statuses</option>
+                  <option value="Active">Active</option>
+                  <option value="Maintenance">Maintenance</option>
+                  <option value="Inactive">Inactive</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Location</label>
+                <select
+                  value={filters.location}
+                  onChange={(e) => setFilters({...filters, location: e.target.value})}
+                  className="form-input"
+                >
+                  <option value="">All Locations</option>
+                  {[...new Set(filteredAircraft.map(a => a.Last_Known_Loc))].map(loc => (
+                    <option key={loc} value={loc}>{loc}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Model</label>
+                <input
+                  type="text"
+                  placeholder="Filter by model..."
+                  value={filters.model}
+                  onChange={(e) => setFilters({...filters, model: e.target.value})}
+                  className="form-input"
+                />
+              </div>
+            </div>
+            <button 
+              onClick={() => setFilters({ model: '', airline: '', status: '', location: '' })}
+              className="btn-secondary"
+              style={{ marginTop: '10px' }}
+            >
+              Clear Filters
+            </button>
+          </div>
+        )}
 
         {showAddForm && (
           <div className="add-form">
@@ -311,6 +395,16 @@ const App = () => {
   // Additional data states
   const [technicians, setTechnicians] = useState([]);
   const [airports, setAirports] = useState([]);
+  
+  // New feature states
+  const [weatherData, setWeatherData] = useState({});
+  const [filters, setFilters] = useState({
+    model: '',
+    airline: '',
+    status: '',
+    location: ''
+  });
+  const [calendarEvents, setCalendarEvents] = useState([]);
 
   const statusColors = {
     'Active': 'status-active',
@@ -357,11 +451,19 @@ const App = () => {
   };
 
   const filteredAircraft = useMemo(() => 
-    aircraft.filter(a =>
-      a.Model?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      a.Airline?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      a.Last_Known_Loc?.toLowerCase().includes(searchTerm.toLowerCase())
-    ), [aircraft, searchTerm]
+    aircraft.filter(a => {
+      const matchesSearch = a.Model?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        a.Airline?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        a.Last_Known_Loc?.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesFilters = 
+        (!filters.model || a.Model?.toLowerCase().includes(filters.model.toLowerCase())) &&
+        (!filters.airline || a.Airline === filters.airline) &&
+        (!filters.status || a.Status === filters.status) &&
+        (!filters.location || a.Last_Known_Loc === filters.location);
+      
+      return matchesSearch && matchesFilters;
+    }), [aircraft, searchTerm, filters]
   );
 
   const handleInputChange = useCallback((e) => {
@@ -466,6 +568,93 @@ const App = () => {
     }
   }, [trackingFormData]);
 
+  // Weather API Integration
+  const fetchWeather = async (location) => {
+    try {
+      const apiKey = '8b86052e9d93f7307b16bef61f05b3bf'; // OpenWeatherMap API key
+      const response = await axios.get(
+        `https://api.openweathermap.org/data/2.5/weather?q=${location}&appid=${apiKey}&units=metric`
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Weather fetch error:', error);
+      return null;
+    }
+  };
+
+  useEffect(() => {
+    // Fetch weather for unique locations
+    const uniqueLocations = [...new Set(aircraft.map(a => a.Last_Known_Loc?.split(' ')[0]))];
+    uniqueLocations.forEach(async (loc) => {
+      if (loc && !weatherData[loc]) {
+        const weather = await fetchWeather(loc);
+        if (weather) {
+          setWeatherData(prev => ({ ...prev, [loc]: weather }));
+        }
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [aircraft]);
+
+  // Prepare calendar events
+  useEffect(() => {
+    const events = [];
+    
+    // Add flight events
+    flights.forEach(flight => {
+      events.push({
+        title: `Flight: ${flight.Model}`,
+        start: new Date(),
+        end: new Date(Date.now() + 3 * 60 * 60 * 1000), // 3 hours later
+        type: 'flight',
+        data: flight
+      });
+    });
+    
+    // Add maintenance events
+    maintenance.forEach(maint => {
+      const date = new Date(maint.Date);
+      events.push({
+        title: `Maintenance: ${maint.Type}`,
+        start: date,
+        end: new Date(date.getTime() + 4 * 60 * 60 * 1000), // 4 hours later
+        type: 'maintenance',
+        data: maint
+      });
+    });
+    
+    setCalendarEvents(events);
+  }, [flights, maintenance]);
+
+  // Chart data preparation
+  const getStatusChartData = () => {
+    const statusCount = aircraft.reduce((acc, a) => {
+      acc[a.Status] = (acc[a.Status] || 0) + 1;
+      return acc;
+    }, {});
+    
+    return Object.entries(statusCount).map(([name, value]) => ({ name, value }));
+  };
+
+  const getMaintenanceChartData = () => {
+    const typeCount = maintenance.reduce((acc, m) => {
+      acc[m.Type] = (acc[m.Type] || 0) + 1;
+      return acc;
+    }, {});
+    
+    return Object.entries(typeCount).map(([name, count]) => ({ name, count }));
+  };
+
+  const getFlightTrendsData = () => {
+    const dates = [...new Set(flights.map(f => f.Destination))];
+    return dates.slice(0, 7).map(dest => ({
+      destination: dest,
+      flights: flights.filter(f => f.Destination === dest).length
+    }));
+  };
+
+  const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
+
   const DashboardView = () => (
     <div className="space-y">
       <div className="stats-grid">
@@ -515,6 +704,69 @@ const App = () => {
               <Users size={32} />
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Analytics Charts Section */}
+      <div className="grid-3">
+        <div className="card">
+          <h3 className="card-title">
+            <BarChart3 size={20} className="icon-blue" />
+            Fleet Status Distribution
+          </h3>
+          <ResponsiveContainer width="100%" height={250}>
+            <PieChart>
+              <Pie
+                data={getStatusChartData()}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                outerRadius={80}
+                fill="#8884d8"
+                dataKey="value"
+              >
+                {getStatusChartData().map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="card">
+          <h3 className="card-title">
+            <Activity size={20} className="icon-green" />
+            Flight Trends
+          </h3>
+          <ResponsiveContainer width="100%" height={250}>
+            <LineChart data={getFlightTrendsData()}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="destination" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Line type="monotone" dataKey="flights" stroke="#10b981" strokeWidth={2} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="card">
+          <h3 className="card-title">
+            <Wrench size={20} className="icon-orange" />
+            Maintenance by Type
+          </h3>
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={getMaintenanceChartData()}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="count" fill="#f59e0b" />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       </div>
 
@@ -1123,6 +1375,114 @@ const App = () => {
     );
   };
 
+  // Calendar View Component
+  const CalendarView = () => {
+    const eventStyleGetter = (event) => {
+      const backgroundColor = event.type === 'flight' ? '#3b82f6' : '#f59e0b';
+      return {
+        style: {
+          backgroundColor,
+          borderRadius: '5px',
+          opacity: 0.8,
+          color: 'white',
+          border: '0px',
+          display: 'block'
+        }
+      };
+    };
+
+    return (
+      <div className="space-y">
+        <div className="card">
+          <h3 className="card-title">
+            <Calendar size={24} className="icon-blue" />
+            Flight & Maintenance Schedule
+          </h3>
+          <div style={{ height: '600px', padding: '20px' }}>
+            <BigCalendar
+              localizer={localizer}
+              events={calendarEvents}
+              startAccessor="start"
+              endAccessor="end"
+              style={{ height: '100%' }}
+              eventPropGetter={eventStyleGetter}
+              views={['month', 'week', 'day', 'agenda']}
+              defaultView="month"
+            />
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Maintenance Timeline View Component
+  const TimelineView = () => {
+    const sortedMaintenance = [...maintenance].sort((a, b) => new Date(b.Date) - new Date(a.Date));
+    
+    return (
+      <div className="space-y">
+        <div className="card">
+          <h3 className="card-title">
+            <Wrench size={24} className="icon-orange" />
+            Maintenance History Timeline
+          </h3>
+          
+          <div className="timeline">
+            {sortedMaintenance.map((maint, idx) => (
+              <div key={maint.Maintenance_ID} className="timeline-item">
+                <div className="timeline-marker" />
+                <div className="timeline-content">
+                  <div className="timeline-header">
+                    <h4 className="timeline-title">{maint.Model} - {maint.Type}</h4>
+                    <span className={`status-badge ${statusColors[maint.Status]}`}>
+                      {maint.Status}
+                    </span>
+                  </div>
+                  <p className="timeline-date">
+                    <Calendar size={14} /> {new Date(maint.Date).toLocaleDateString('en-US', { 
+                      year: 'numeric', 
+                      month: 'long', 
+                      day: 'numeric' 
+                    })}
+                  </p>
+                  <p className="timeline-detail">
+                    <Users size={14} /> Technician ID: {maint.Tech_ID}
+                  </p>
+                  {maint.Remark && (
+                    <p className="timeline-remark">"{maint.Remark}"</p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Weather View Component (integrated)
+  const WeatherPanel = ({ location }) => {
+    const weather = weatherData[location?.split(' ')[0]];
+    if (!weather) return null;
+
+    return (
+      <div className="weather-card">
+        <div className="weather-header">
+          <Cloud size={20} className="icon-blue" />
+          <span>{weather.name}</span>
+        </div>
+        <div className="weather-content">
+          <div className="weather-temp">{Math.round(weather.main.temp)}°C</div>
+          <div className="weather-desc">{weather.weather[0].description}</div>
+          <div className="weather-details">
+            <span>💨 {weather.wind.speed} m/s</span>
+            <span>💧 {weather.main.humidity}%</span>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   if (loading) {
     return (
       <div className="loading-container">
@@ -1182,6 +1542,8 @@ const App = () => {
           {[
             { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
             { id: 'fleet', label: 'Fleet', icon: Plane },
+            { id: 'calendar', label: 'Calendar', icon: Calendar },
+            { id: 'timeline', label: 'Timeline', icon: Activity },
             { id: 'tracking', label: 'Tracking', icon: Map },
             { id: 'maintenance', label: 'Maintenance', icon: Wrench },
             { id: 'tcl', label: 'TCL', icon: Database },
@@ -1216,7 +1578,11 @@ const App = () => {
           setSelectedAircraft={setSelectedAircraft}
           statusColors={statusColors}
           maintenance={maintenance}
+          filters={filters}
+          setFilters={setFilters}
         />}
+        {activeTab === 'calendar' && <CalendarView />}
+        {activeTab === 'timeline' && <TimelineView />}
         {activeTab === 'tracking' && <TrackingView />}
         {activeTab === 'maintenance' && <MaintenanceView />}
         {activeTab === 'tcl' && <TCLView />}
