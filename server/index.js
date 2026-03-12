@@ -37,7 +37,7 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Server is running' });
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server is running on http://localhost:${PORT}`);
-  console.log(`📊 API endpoints available at http://localhost:${PORT}/api`);
+app.listen(PORT, '127.0.0.1', () => {
+  console.log(`🚀 Server is running on http://127.0.0.1:${PORT}`);
+  console.log(`📊 API endpoints available at http://127.0.0.1:${PORT}/api`);
 });

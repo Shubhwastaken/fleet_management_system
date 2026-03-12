@@ -24,7 +24,9 @@
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .loading-text {
@@ -173,9 +175,12 @@
 }
 
 @keyframes pulse {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 1;
   }
+
   50% {
     opacity: 0.5;
   }
@@ -221,7 +226,7 @@
   transition: all 150ms;
 }
 
-.tab:hover {
+.tab:hover:not(.tab-active) {
   background: #f9fafb;
 }
 
@@ -862,6 +867,10 @@
   color: #9ca3af;
 }
 
+.icon-green {
+  color: #059669;
+}
+
 .icon-purple {
   color: #7c3aed;
 }
@@ -1173,15 +1182,15 @@
   .grid-3 {
     grid-template-columns: 1fr;
   }
-  
+
   .timeline::before {
     left: 10px;
   }
-  
+
   .timeline-item {
     padding-left: 40px;
   }
-  
+
   .timeline-marker {
     left: 3px;
   }

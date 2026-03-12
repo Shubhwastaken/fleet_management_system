@@ -1,27 +1,41 @@
 {
-  "name": "aviation-fleet-management",
+  "name": "aviation-fleet-frontend",
   "version": "1.0.0",
-  "description": "Aviation Fleet Management System with TCL and DCL implementation",
-  "main": "server/index.js",
-  "scripts": {
-    "server": "node server/index.js",
-    "client": "cd client && npm start",
-    "dev": "concurrently \"npm run server\" \"npm run client\"",
-    "build": "cd client && npm run build",
-    "install-all": "npm install && cd client && npm install"
-  },
-  "keywords": ["aviation", "fleet", "management", "mysql", "tcl", "dcl"],
-  "author": "",
-  "license": "ISC",
+  "private": true,
   "dependencies": {
-    "express": "^4.18.2",
-    "mysql2": "^3.6.5",
-    "cors": "^2.8.5",
-    "dotenv": "^16.3.1",
-    "body-parser": "^1.20.2"
+    "axios": "^1.6.0",
+    "body-parser": "^2.2.2",
+    "cors": "^2.8.6",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "lucide-react": "^0.263.1",
+    "mysql2": "^3.17.2",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-scripts": "5.0.1"
   },
-  "devDependencies": {
-    "concurrently": "^8.2.2",
-    "nodemon": "^3.0.2"
-  }
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "proxy": "http://localhost:5000"
 }
